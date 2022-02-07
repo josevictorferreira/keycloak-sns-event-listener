@@ -2,84 +2,74 @@ package com.github.josevictorferreira.keycloak.sns;
 
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
+import org.keycloak.events.EventListenerTransaction;
 import org.keycloak.events.admin.AdminEvent;
-
-import java.util.Map;
+import org.keycloak.models.KeycloakSession;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import software.amazon.awssdk.services.sns.model.PublishResponse;
+import software.amazon.awssdk.services.sns.model.SnsException;
 
 public class SNSEventListenerProvider implements EventListenerProvider {
-    public SNSEventListenerProvider() {
+
+    private SNSConfig cfg;
+    private KeycloakSession session;
+    private SnsClient snsClient;
+
+    private EventListenerTransaction tx = new EventListenerTransaction(this::publishAdminEvent, this::publishEvent);
+
+    public SNSEventListenerProvider(SNSConfig cfg, KeycloakSession session) {
+        this.cfg = cfg;
+        this.session = session;
+        this.session.getTransactionManager().enlistAfterCompletion(tx);
+        this.snsClient = SnsClient.builder()
+                .region(this.cfg.getRegion())
+                .build();
     }
 
     @Override
     public void onEvent(Event event) {
-        System.out.println("Event Ocurred: " + toString(event));
+        tx.addEvent(event);
     }
 
     @Override
-    public void onEvent(AdminEvent adminEvent, boolean b) {
-        System.out.println("Admin Event Ocurred: " + toString(adminEvent));
+    public void onEvent(AdminEvent adminEvent, boolean includeRepresentation) {
+        tx.addAdminEvent(adminEvent, includeRepresentation);
     }
 
     @Override
     public void close() {
     }
 
-    private String toString(Event event) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("type=");
-        sb.append(event.getType());
-        sb.append(", realmId=");
-        sb.append(event.getRealmId());
-        sb.append(", clientId=");
-        sb.append(event.getClientId());
-        sb.append(", userId=");
-        sb.append(event.getUserId());
-        sb.append(", ipAddress=");
-        sb.append(event.getIpAddress());
+    private void publishEvent(Event event) {
+        ClientNotificationSerializer msg = ClientNotificationSerializer.create(event);
+        String messageString = SNSConfig.writeAsJson(msg, true);
 
-        if (event.getError() != null) {
-            sb.append(", error=");
-            sb.append(event.getError());
-        }
-
-        if (event.getDetails() != null) {
-            for (Map.Entry<String, String> e : event.getDetails().entrySet()) {
-                sb.append(", ");
-                sb.append(e.getKey());
-                if (e.getValue() == null || e.getValue().indexOf(' ') == -1) {
-                    sb.append("=");
-                    sb.append(e.getValue());
-                } else {
-                    sb.append("='");
-                    sb.append(e.getValue());
-                    sb.append("'");
-                }
-            }
-        }
-
-        return sb.toString();
+        this.publishNotification(messageString);
     }
 
-    private String toString(AdminEvent adminEvent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("operationType=");
-        sb.append(adminEvent.getOperationType());
-        sb.append(", realmId=");
-        sb.append(adminEvent.getAuthDetails().getRealmId());
-        sb.append(", clientId=");
-        sb.append(adminEvent.getAuthDetails().getClientId());
-        sb.append(", userId=");
-        sb.append(adminEvent.getAuthDetails().getUserId());
-        sb.append(", ipAddress=");
-        sb.append(adminEvent.getAuthDetails().getIpAddress());
-        sb.append(", resourcePath=");
-        sb.append(adminEvent.getResourcePath());
+    private void publishAdminEvent(AdminEvent adminEvent, boolean includeRepresentation) {
+        AdminNotificationSerializer msg = AdminNotificationSerializer.create(adminEvent);
+        String messageString = SNSConfig.writeAsJson(msg, true);
 
-        if (adminEvent.getError() != null) {
-            sb.append(", error=");
-            sb.append(adminEvent.getError());
+        this.publishNotification(messageString);
+    }
+
+    private void publishNotification(String messageString) {
+        try {
+            PublishRequest request = PublishRequest.builder()
+                    .message(messageString)
+                    .topicArn(this.cfg.getTopic())
+                    .build();
+            PublishResponse result = this.snsClient.publish(request);
+            System.out.println(result.messageId() + " Message sent. Status is " + result.sdkHttpResponse().statusCode());
+        } catch (SnsException e) {
+            System.err.println(e.awsErrorDetails().errorMessage());
+            e.printStackTrace();
+
+        } catch (Exception ex) {
+            System.err.println("keycloak-to-sns ERROR sending message: " + messageString);
+            ex.printStackTrace();
         }
-
-        return sb.toString();
     }
 }
