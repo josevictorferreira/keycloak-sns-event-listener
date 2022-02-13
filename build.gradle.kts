@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.github.josevictorferreira"
-version = "1.2.13"
+version = "1.2.14"
 
 repositories {
     mavenCentral()
@@ -33,6 +33,7 @@ dependencies {
 
 tasks {
     jar {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
         from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
             exclude("META-INF/MANIFEST.MF")
             exclude("META-INF/*.SF")
