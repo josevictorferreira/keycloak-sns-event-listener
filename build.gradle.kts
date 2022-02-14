@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "com.github.josevictorferreira"
-version = "1.2.16"
+version = "1.2.17"
 
 repositories {
     mavenCentral()
