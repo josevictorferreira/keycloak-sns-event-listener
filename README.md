@@ -4,7 +4,7 @@ Keycloak extensions that aims to publish events to a SNS(Amazon Simple Notificat
 
 ## Installation
 
-First, build the jar file, and then copy generated file on `./build/libs/keycloak-sns-event-listener-1.2.17.jar` to `/opt/jboss/keycloak/standalone/deployments/`:
+First, build the jar file, and then copy generated file `./build/libs/keycloak-sns-event-listener-1.2.17.jar` to `/opt/jboss/keycloak/standalone/deployments/`:
 
 ```bash
 ./gradlew jar
