@@ -63,7 +63,6 @@ public class SNSEventListenerProvider implements EventListenerProvider {
                     .build();
             PublishResponse result = this.snsClient.publish(request);
             System.out.println(result.messageId() + " Message sent. Status is " + result.sdkHttpResponse().statusCode());
-            System.out.println(result.sdkHttpResponse().statusText());
         } catch (SnsException e) {
             System.err.println(e.awsErrorDetails().errorMessage());
             e.printStackTrace();
