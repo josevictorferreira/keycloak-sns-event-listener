@@ -9,19 +9,6 @@ First, build the jar file: `./gradlew jar`
 Copy the generated file `./build/libs/keycloak-sns-event-listener-1.2.17.jar` to `/opt/jboss/keycloak/standalone/deployments/`
 
 Then add the following system variables to your keycloak service:
-
-```
-# AWS Access key id
-AWS_ACCESS_KEY_ID=YOURAWSACCESSKEYID
-# AWS Secret Access Key
-AWS_SECRET_ACCESS_KEY=YOURAWSSECRETKEY
-# AWS Region
-KK_TO_SNS_REGION=aws-region
-# SNS Topic Arn
-KK_TO_SNS_TOPIC=YOUR_SNS_ARN_TOPIC
-```
-
-Then add the following system variables to your keycloak service:
 ```
 # AWS Access key id
 AWS_ACCESS_KEY_ID=YOURAWSACCESSKEYID
